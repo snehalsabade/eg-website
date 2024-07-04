@@ -234,7 +234,6 @@ export default function List() {
     }
   };
   const handleSearch = (e) => {
-    console.log("e", e);
     setFilter((item) => ({
       ...item,
       filters: { state_name: e.nativeEvent.text },

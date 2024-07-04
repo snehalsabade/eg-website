@@ -229,7 +229,12 @@ function View() {
               icon: "GroupLineIcon",
             },
 
-            <Chip textAlign="center" lineHeight="15px" label={address?.id} />,
+            <Chip
+              key={address?.id}
+              textAlign="center"
+              lineHeight="15px"
+              label={address?.id}
+            />,
           ]}
         />
         <HStack space={4}>
