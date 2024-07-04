@@ -67,6 +67,7 @@ function View() {
             onButtonClick={handleEditButton}
             item={{
               ...doId,
+              event_type: t(doId?.event_type),
             }}
             title={t("BASIC_DETAILS")}
             label={["ID", "DO_ID", "EVENT_TYPE", "STATUS"]}
