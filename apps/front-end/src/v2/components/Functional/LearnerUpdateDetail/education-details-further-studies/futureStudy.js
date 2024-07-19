@@ -148,7 +148,7 @@ export default function FutureStudy({ userTokenInfo }) {
       setFormData({
         ...formData,
         career_aspiration_details:
-          result?.core_beneficiaries?.career_aspiration_details,
+          result?.core_beneficiaries?.career_aspiration_details || undefined,
         career_aspiration: result?.core_beneficiaries?.career_aspiration,
         parent_support: result?.core_beneficiaries?.parent_support,
         aspiration_mapping: {
@@ -221,11 +221,32 @@ export default function FutureStudy({ userTokenInfo }) {
     }
   };
 
+  const transformData = (data) => {
+    const replaceUndefinedWithNull = (value) => {
+      if (value === undefined) {
+        return null;
+      }
+      if (Array.isArray(value)) {
+        return value.map(replaceUndefinedWithNull);
+      }
+      if (typeof value === "object" && value !== null) {
+        return Object.keys(value).reduce((acc, key) => {
+          acc[key] = replaceUndefinedWithNull(value[key]);
+          return acc;
+        }, {});
+      }
+      return value;
+    };
+
+    return replaceUndefinedWithNull(data);
+  };
+
   const onSubmit = async (data) => {
     setIsDisable(true);
     let newFormData = data.formData;
     const newdata = filterObject(newFormData, Object.keys(schema?.properties));
-    const updateDetails = await AgRegistryService.updateAg(newdata, userId);
+    const mainPayload = transformData(newdata);
+    const updateDetails = await AgRegistryService.updateAg(mainPayload, userId);
     if (updateDetails) {
       navigate(`/beneficiary/${userId}/educationdetails`);
     }
@@ -246,6 +267,9 @@ export default function FutureStudy({ userTokenInfo }) {
         _box: { bg: "white", shadow: "appBarShadow" },
       }}
       _page={{ _scollView: { bg: "formBg.500" } }}
+      analyticsPageTitle={"BENEFICIARY_FUTURE_DETAILS"}
+      pageTitle={t("BENEFICIARY")}
+      stepTitle={t("LEARNER_ASPIRATION")}
     >
       <Box py={6} px={4} mb={5}>
         {alert ? (

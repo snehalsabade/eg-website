@@ -277,7 +277,7 @@ export default function EnrollmentForm() {
 
   const [uiSchema, setUiSchema] = useState({
     subjects: {
-      "ui:widget": "checkboxes",
+      "ui:widget": "MultiCheck",
     },
     enrollment_date: {
       "ui:widget": "alt-date",
@@ -432,8 +432,15 @@ export default function EnrollmentForm() {
     switch (key) {
       case "enrollment_mobile_no":
         const mobile = data?.enrollment_mobile_no;
-        const regex = /^([+]\d{2})?\d{10}$/;
-        if (!mobile || !mobile?.match(regex)) {
+        const regex = /^[1-9][0-9]{0,9}$/;
+        if (
+          !mobile ||
+          !mobile?.match(regex) ||
+          !(
+            data?.enrollment_mobile_no > 6000000000 &&
+            data?.enrollment_mobile_no < 9999999999
+          )
+        ) {
           error = { [key]: t("REQUIRED_MESSAGE") };
         }
         break;
@@ -789,7 +796,7 @@ export default function EnrollmentForm() {
       } else if (success && formData.enrollment_status === "enrolled") {
         nextPreviewStep();
       } else {
-        navigate(`/beneficiary/${userId}`);
+        navigate(`/beneficiary/${userId}/enrollmentdetails`);
       }
     }
     setBtnLoading(false);
@@ -811,6 +818,9 @@ export default function EnrollmentForm() {
           _box: { bg: "white", shadow: "appBarShadow" },
         }}
         _page={{ _scollView: { bg: "formBg.500" } }}
+        analyticsPageTitle={"BENEFICIARY_ENROLLMENT_FORM"}
+        pageTitle={t("BENEFICIARY")}
+        stepTitle={t("ENROLLMENT_DETAILS")}
       >
         <Alert status="warning" alignItems={"start"} mb="3" mt="4">
           <HStack alignItems="center" space="2" color>

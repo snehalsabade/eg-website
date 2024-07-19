@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Alert, Avatar, HStack, Pressable, VStack } from "native-base";
 import { useNavigate } from "react-router-dom";
 
-const ExamLearnerList = ({ footerLinks }) => {
+const ExamLearnerList = ({ footerLinks, userTokenInfo: { authUser } }) => {
   const [loading, setLoading] = useState(true);
   const [leanerList, setLeanerList] = useState([]);
 
@@ -17,14 +17,14 @@ const ExamLearnerList = ({ footerLinks }) => {
 
   const flattenList = (list) => {
     let flattenedArray = [];
-    list.forEach((item) => {
-      item.group.group_users.forEach((userObj) => {
-        const { user_id, first_name, middle_name, last_name } = userObj.user;
-        flattenedArray.push({
+    list?.forEach((item) => {
+      item?.group?.group_users?.forEach((userObj) => {
+        const { user_id, program_beneficiaries } = userObj?.user;
+        flattenedArray?.push({
           user_id,
-          first_name,
-          middle_name: middle_name || "",
-          last_name: last_name || "",
+          first_name: program_beneficiaries?.[0]?.enrollment_first_name,
+          middle_name: program_beneficiaries?.[0]?.enrollment_middle_name,
+          last_name: program_beneficiaries?.[0]?.enrollment_last_name,
           group_id: item.group.group_id,
           camp_id: item.camp_id,
         });
@@ -57,12 +57,12 @@ const ExamLearnerList = ({ footerLinks }) => {
   const mergingData = (flattenedList, report) => {
     const mergedArray = flattenedList?.map((user) => {
       const userData = { ...user };
-      const responses = report.reduce((acc, observation) => {
-        const fieldResponse = observation.field_responses.find(
+      const responses = report?.reduce((acc, observation) => {
+        const fieldResponse = observation?.field_responses?.find(
           (response) => response.context_id === user.user_id
         );
         if (fieldResponse) {
-          acc.push({
+          acc?.push({
             field_id: observation.field_id,
             response_value: fieldResponse.response_value,
           });
@@ -85,20 +85,20 @@ const ExamLearnerList = ({ footerLinks }) => {
   };
 
   const getStatus = (responses) => {
-    const WILL_LEARNER_APPEAR_FOR_EXAM = responses.find(
-      (response) => response.field_id === 10
+    const WILL_LEARNER_APPEAR_FOR_EXAM = responses?.find(
+      (response) => response.field_id === 25
     );
-    const WILL_LEARNER_APPEAR_FOR_EXAM_REASONS = responses.find(
-      (response) => response.field_id === 11
+    const WILL_LEARNER_APPEAR_FOR_EXAM_REASONS = responses?.find(
+      (response) => response.field_id === 26
     );
-    const DID_LEARNER_RECEIVE_ADMIT_CARD = responses.find(
-      (response) => response.field_id === 12
+    const DID_LEARNER_RECEIVE_ADMIT_CARD = responses?.find(
+      (response) => response.field_id === 27
     );
-    const HAS_LEARNER_PREPARED_PRACTICAL_FILE = responses.find(
-      (response) => response.field_id === 13
+    const HAS_LEARNER_PREPARED_PRACTICAL_FILE = responses?.find(
+      (response) => response.field_id === 28
     );
-    const LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER = responses.find(
-      (response) => response.field_id === 14
+    const LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER = responses?.find(
+      (response) => response.field_id === 29
     );
     // const response6 = responses.find((response) => response.field_id === 15);
     if (
@@ -144,12 +144,18 @@ const ExamLearnerList = ({ footerLinks }) => {
 
   return (
     <Layout
+      facilitator={{
+        ...authUser,
+        program_faciltators: authUser?.user_roles?.[0],
+      }}
       loading={loading}
       _appBar={{
         onPressBackButton,
         onlyIconsShow: ["backBtn", "langBtn"],
       }}
       _footer={{ menues: footerLinks }}
+      analyticsPageTitle={"EXAM_PREPARATION"}
+      pageTitle={t("CAMP_EXAM_PREPARATION")}
     >
       {leanerList.length === 0 ? (
         <Alert mt={4} status="warning">

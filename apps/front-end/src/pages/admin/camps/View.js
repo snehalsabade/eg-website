@@ -15,6 +15,7 @@ import {
   GetEnumValue,
   mapDistance,
   FrontEndTypo,
+  setFilterLocalStorage,
 } from "@shiksha/common-lib";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -25,7 +26,6 @@ import {
   Pressable,
   Stack,
   ScrollView,
-  useToast,
   Menu,
 } from "native-base";
 import { useTranslation } from "react-i18next";
@@ -34,7 +34,7 @@ import { StarRating } from "component/BaseInput";
 import DataTable from "react-data-table-component";
 import PropTypes from "prop-types";
 
-const ConsentForm = ({ consentData, row, t }) => {
+const ConsentForm = ({ consentData, row }) => {
   let learnerConsentData = Array.isArray(consentData)
     ? consentData.find((e) => e.user_id === row?.id)
     : {};
@@ -70,16 +70,6 @@ const mapDirection = ({ row, data }) => {
         rounded="full"
       />
     </a>
-  );
-};
-
-const dropDown = (triggerProps, t) => {
-  return (
-    <Pressable accessibilityLabel="More options menu" {...triggerProps}>
-      <HStack>
-        <IconByName name="ArrowDownSLineIcon" isDisabled={true} />
-      </HStack>
-    </Pressable>
   );
 };
 
@@ -251,7 +241,9 @@ export default function View({ footerLinks }) {
       status,
     });
     if (result?.status === 200) {
-      navigate(`/admin/camps?status=${status}&page=1`);
+      const obj = { limit: 10, page: 1, status: status };
+      setFilterLocalStorage("camp_filter", obj);
+      navigate(`/admin/camps`);
     } else {
       setIsButtonLoading(false);
       setErrorList(result?.message);
@@ -711,4 +703,5 @@ View.PropTypes = {
   footerLinks: PropTypes.any,
   row: PropTypes.any,
   t: PropTypes.any,
+  consentData: PropTypes.any,
 };

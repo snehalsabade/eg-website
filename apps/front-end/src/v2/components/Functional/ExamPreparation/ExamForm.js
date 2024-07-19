@@ -19,7 +19,7 @@ import { Box } from "native-base";
 import { finalPayload } from "./Payload.js";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
-const EpcpForm = ({ footerLinks }) => {
+const EpcpForm = ({ footerLinks, userTokenInfo: { authUser } }) => {
   const formRef = useRef();
   const [formData, setFormData] = useState();
   const [loading, setLoading] = useState(true);
@@ -48,11 +48,11 @@ const EpcpForm = ({ footerLinks }) => {
     type: "object",
     properties: {
       WILL_LEARNER_APPEAR_FOR_EXAM: {
-        label: `${t("EXAM_PREPARATION.WILL_LEARNER_APPEAR_FOR_EXAM.TITLE1")} ${
-          learnerData?.first_name
-        } ${
+        description: `${t(
+          "EXAM_PREPARATION.WILL_LEARNER_APPEAR_FOR_EXAM.TITLE1"
+        )} ${learnerData?.first_name} ${
           learnerData?.last_name
-            ? `${learnerData?.middle_name} ${learnerData?.last_name}`
+            ? `${learnerData?.middle_name || ""} ${learnerData?.last_name}`
             : ""
         } ${t("EXAM_PREPARATION.WILL_LEARNER_APPEAR_FOR_EXAM.TITLE2")}`,
         type: "string",
@@ -75,31 +75,32 @@ const EpcpForm = ({ footerLinks }) => {
         then: {
           properties: {
             HAS_LEARNER_PREPARED_PRACTICAL_FILE: {
-              label:
+              description:
                 "EXAM_PREPARATION.HAS_LEARNER_PREPARED_PRACTICAL_FILE.TITLE",
               type: ["string", "null"],
               direction: "row",
               format: "RadioBtn",
               enum: sortEnums(
                 "EXAM_PREPARATION.HAS_LEARNER_PREPARED_PRACTICAL_FILE.",
-                3
+                2
               ),
               default: null,
             },
             LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER: {
-              label:
+              description:
                 "EXAM_PREPARATION.LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER.TITLE",
               type: ["string", "null"],
               direction: "column",
               format: "RadioBtn",
               enum: sortEnums(
                 "EXAM_PREPARATION.LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER.",
-                4
+                1
               ),
               default: null,
             },
             DID_LEARNER_RECEIVE_ADMIT_CARD: {
-              label: "EXAM_PREPARATION.DID_LEARNER_RECEIVE_ADMIT_CARD.TITLE",
+              description:
+                "EXAM_PREPARATION.DID_LEARNER_RECEIVE_ADMIT_CARD.TITLE",
               type: ["string", "null"],
               direction: "row",
               format: "RadioBtn",
@@ -132,13 +133,13 @@ const EpcpForm = ({ footerLinks }) => {
         then: {
           properties: {
             WILL_LEARNER_APPEAR_FOR_EXAM_NO_REASONS: {
-              label:
+              description:
                 "EXAM_PREPARATION.WILL_LEARNER_APPEAR_FOR_EXAM_NO_REASONS.TITLE",
               type: "string",
               format: "RadioBtn",
               enum: sortEnums(
                 "EXAM_PREPARATION.WILL_LEARNER_APPEAR_FOR_EXAM_NO_REASONS.",
-                1
+                4
               ),
             },
           },
@@ -202,17 +203,6 @@ const EpcpForm = ({ footerLinks }) => {
       setErrors(newErrors);
     } else if (
       newFormData?.WILL_LEARNER_APPEAR_FOR_EXAM === "YES" &&
-      !newFormData?.DID_LEARNER_RECEIVE_ADMIT_CARD
-    ) {
-      const newErrors = {
-        DID_LEARNER_RECEIVE_ADMIT_CARD: {
-          __errors: [t("REQUIRED_MESSAGE")],
-        },
-      };
-      setErrors(newErrors);
-    } else if (
-      newFormData?.WILL_LEARNER_APPEAR_FOR_EXAM &&
-      newFormData?.DID_LEARNER_RECEIVE_ADMIT_CARD &&
       !newFormData?.HAS_LEARNER_PREPARED_PRACTICAL_FILE
     ) {
       const newErrors = {
@@ -223,12 +213,23 @@ const EpcpForm = ({ footerLinks }) => {
       setErrors(newErrors);
     } else if (
       newFormData?.WILL_LEARNER_APPEAR_FOR_EXAM &&
-      newFormData?.DID_LEARNER_RECEIVE_ADMIT_CARD &&
       newFormData?.HAS_LEARNER_PREPARED_PRACTICAL_FILE &&
       !newFormData?.LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER
     ) {
       const newErrors = {
         LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER: {
+          __errors: [t("REQUIRED_MESSAGE")],
+        },
+      };
+      setErrors(newErrors);
+    } else if (
+      newFormData?.WILL_LEARNER_APPEAR_FOR_EXAM &&
+      newFormData?.HAS_LEARNER_PREPARED_PRACTICAL_FILE &&
+      newFormData?.LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER &&
+      !newFormData?.DID_LEARNER_RECEIVE_ADMIT_CARD
+    ) {
+      const newErrors = {
+        DID_LEARNER_RECEIVE_ADMIT_CARD: {
           __errors: [t("REQUIRED_MESSAGE")],
         },
       };
@@ -250,7 +251,7 @@ const EpcpForm = ({ footerLinks }) => {
 
   const getFieldResponseByTitle = (title) => {
     // Find the object in data array where fields title matches the given title
-    const field = data.find((item) => item.fields[0].title === title);
+    const field = data?.find((item) => item.fields[0].title === title);
     // If field is found, return its field_responses data, otherwise return null
     return field?.field_responses?.[0]?.response_value || "";
   };
@@ -284,15 +285,27 @@ const EpcpForm = ({ footerLinks }) => {
             "WILL_LEARNER_APPEAR_FOR_EXAM_NO_REASONS"
           )}`
         : "",
-      DID_LEARNER_RECEIVE_ADMIT_CARD: `EXAM_PREPARATION.DID_LEARNER_RECEIVE_ADMIT_CARD.${getFieldResponseByTitle(
+      DID_LEARNER_RECEIVE_ADMIT_CARD: getFieldResponseByTitle(
         "DID_LEARNER_RECEIVE_ADMIT_CARD"
-      )}`,
-      HAS_LEARNER_PREPARED_PRACTICAL_FILE: `EXAM_PREPARATION.HAS_LEARNER_PREPARED_PRACTICAL_FILE.${getFieldResponseByTitle(
+      )
+        ? `EXAM_PREPARATION.DID_LEARNER_RECEIVE_ADMIT_CARD.${getFieldResponseByTitle(
+            "DID_LEARNER_RECEIVE_ADMIT_CARD"
+          )}`
+        : "",
+      HAS_LEARNER_PREPARED_PRACTICAL_FILE: getFieldResponseByTitle(
         "HAS_LEARNER_PREPARED_PRACTICAL_FILE"
-      )}`,
-      LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER: `EXAM_PREPARATION.LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER.${getFieldResponseByTitle(
+      )
+        ? `EXAM_PREPARATION.HAS_LEARNER_PREPARED_PRACTICAL_FILE.${getFieldResponseByTitle(
+            "HAS_LEARNER_PREPARED_PRACTICAL_FILE"
+          )}`
+        : "",
+      LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER: getFieldResponseByTitle(
         "LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER"
-      )}`,
+      )
+        ? `EXAM_PREPARATION.LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER.${getFieldResponseByTitle(
+            "LEARNER_HAVE_TRAVEL_ARRANGEMENTS_TO_EXAM_CENTER"
+          )}`
+        : "",
 
       // LEARNER_RECEIVED_EXAM_TIME_TABLE: getFieldResponseByTitle(
       //   "LEARNER_RECEIVED_EXAM_TIME_TABLE"
@@ -303,12 +316,18 @@ const EpcpForm = ({ footerLinks }) => {
 
   return (
     <Layout
+      facilitator={{
+        ...authUser,
+        program_faciltators: authUser?.user_roles?.[0],
+      }}
       loading={loading}
       _appBar={{
         onPressBackButton,
         onlyIconsShow: ["backBtn", "langBtn"],
       }}
       _footer={{ menues: footerLinks }}
+      analyticsPageTitle={"EXAM_PREPARATION_FORM"}
+      pageTitle={t("CAMP_EXAM_PREPARATION")}
     >
       <Box p={4}>
         <Form

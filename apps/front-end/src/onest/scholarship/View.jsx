@@ -5,7 +5,7 @@ import ReactGA from "react-ga4";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
-import { registerTelementry } from "../api/Apicall";
+// import { registerTelementry } from "../api/Apicall";
 import { dataConfig } from "../card";
 import OrderSuccessModal from "./OrderSuccessModal";
 import "./Shared.css";
@@ -34,13 +34,14 @@ function ScholarshipView() {
 
   const closeModal = () => {
     setOpenModal(false);
-    navigate("/");
+    navigate(-1);
   };
 
-  const getApplicationStatus = async (order_id) => {
+  const getApplicationStatus = async (order_id, id) => {
     const apiUrl = `${baseUrl}/content/searchOrder/${order_id}`;
 
     try {
+      setLoading(true);
       await axios
         .get(apiUrl)
         .then(async (response) => {
@@ -63,11 +64,21 @@ function ScholarshipView() {
               },
             };
             const statusTrack = await OnestService.statusTrack(payload);
-            if (statusTrack?.responses[0]?.message) {
+            if (
+              statusTrack?.responses[0]?.message?.order?.fulfillments?.[0]
+                ?.state?.descriptor?.name
+            ) {
               setStatus(
                 statusTrack?.responses[0]?.message?.order?.fulfillments[0]
                   ?.state?.descriptor?.name
               );
+              const newPayload = {
+                status:
+                  statusTrack?.responses[0]?.message?.order?.fulfillments[0]
+                    ?.state?.descriptor?.name || status,
+                id,
+              };
+              await OnestService.updateApplicationStatus(newPayload);
             }
           } catch (e) {
             console.error(
@@ -81,9 +92,10 @@ function ScholarshipView() {
         });
     } catch (error) {
       console.log("error ::", error);
+    } finally {
+      setLoading(false);
+      setOpenModal(true);
     }
-
-    setOpenModal(true);
   };
 
   useEffect(() => {
@@ -95,10 +107,10 @@ function ScholarshipView() {
         context_item_id: jobId,
         user_id: userData.user_id,
       };
-      let result = await OnestService.getList({ filter: data });
+      let result = await OnestService.getList({ filters: data });
       if (result?.data.length) {
         setListData(result?.data);
-        getApplicationStatus(result?.data[0].order_id);
+        getApplicationStatus(result?.data[0].order_id, result?.data[0]?.id);
       }
     };
     fetchData();
@@ -236,7 +248,7 @@ function ScholarshipView() {
       registerTelementry(siteUrl, transactionId);
     }*/
 
-    registerTelementry(siteUrl, transactionId);
+    // registerTelementry(siteUrl, transactionId);
 
     // ReactGA.pageview(window.location.pathname + window.location.search);
     var requestOptions = {

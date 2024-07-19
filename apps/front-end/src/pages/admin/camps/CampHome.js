@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Form from "@rjsf/core";
 import validator from "@rjsf/validator-ajv8";
 import { MultiCheck, select } from "../../../component/BaseInput";
@@ -14,6 +14,7 @@ import {
   Modal,
   Alert,
   useToast,
+  Stack,
 } from "native-base";
 import {
   AdminTypo,
@@ -31,7 +32,7 @@ import {
   getSelectedProgramId,
 } from "@shiksha/common-lib";
 import DataTable from "react-data-table-component";
-import { CampChipStatus } from "component/Chip";
+import Chip, { CampChipStatus } from "component/Chip";
 import { debounce } from "lodash";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
@@ -140,38 +141,89 @@ const closePcrColuman = (t) => [
   },
 ];
 
+const errorPcrColuman = (t) => [
+  {
+    name: t("CAMP_ID"),
+    selector: (row) => row?.camp_id,
+    sortable: false,
+    width: "100px",
+  },
+  {
+    name: t("CAMP_INCOMPLETED_SESSIONS"),
+    selector: (row) =>
+      row?.session?.length > 0 ? (
+        <HStack flexWrap={"wrap"}>
+          {/* {row?.session?.map((item) => ( */}
+          <Chip label={row?.session?.[0]?.ordering} />
+          {/* ))} */}
+        </HStack>
+      ) : (
+        t("COMPLETED")
+      ),
+    sortable: false,
+    width: "120px",
+  },
+  {
+    name: t("CAMP_INCOMPLETED_NEEW_ASSESSMENT"),
+    selector: (row) =>
+      row?.users?.length > 0 ? (
+        <HStack flexWrap={"wrap"}>
+          {row?.users?.map((item) => (
+            <Chip label={item?.id} />
+          ))}
+        </HStack>
+      ) : (
+        t("COMPLETED")
+      ),
+    sortable: false,
+  },
+];
+
 export default function CampHome({ footerLinks, userTokenInfo }) {
   const { t } = useTranslation();
-  const [filter, setFilter] = React.useState({ limit: 10 });
+  const [filter, setFilter] = useState({ limit: 10 });
   const [Width, Height] = useWindowSize();
-  const [refAppBar, setRefAppBar] = React.useState();
-  const ref = React.useRef(null);
+  const [refAppBar, setRefAppBar] = useState();
+  const ref = useRef(null);
   const navigate = useNavigate();
-  const [data, setData] = React.useState([]);
-  const [urlFilterApply, setUrlFilterApply] = React.useState(false);
-  const [campFilterStatus, setCampFilterStatus] = React.useState([]);
-  const [enumOptions, setEnumOptions] = React.useState({});
-  const [paginationTotalRows, setPaginationTotalRows] = React.useState(0);
+  const [data, setData] = useState([]);
+  const [urlFilterApply, setUrlFilterApply] = useState(false);
+  const [campFilterStatus, setCampFilterStatus] = useState([]);
+  const [enumOptions, setEnumOptions] = useState({});
+  const [paginationTotalRows, setPaginationTotalRows] = useState(0);
   const [selectedRows, setSelectedRows] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [isButtonLoading, setIsButtonLoading] = useState(false);
   const toast = useToast();
   const [debounced, setDebounced] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [errors, setErrors] = useState();
 
-  React.useEffect(() => {
+  const handleOpenButtonClick = () => {
+    setIsDrawerOpen((prevState) => !prevState);
+  };
+
+  const init = useCallback(() => {
     const urlFilter = getFilterLocalStorage(filterName);
-    setFilter({ ...filter, ...urlFilter });
+    setFilter((prevFilter) => ({ ...prevFilter, ...urlFilter }));
     setUrlFilterApply(true);
   }, []);
 
-  React.useEffect(async () => {
-    const result = await enumRegistryService.getStatuswiseCount();
-    setCampFilterStatus(result);
-    const data = await enumRegistryService.listOfEnum();
-    setEnumOptions(data?.data ? data?.data : {});
+  useEffect(() => {
+    init();
+  }, [init]);
+
+  useEffect(() => {
+    async function fetchData() {
+      const result = await enumRegistryService.getStatuswiseCount();
+      setCampFilterStatus(result);
+      const data = await enumRegistryService.listOfEnum();
+      setEnumOptions(data?.data ? data?.data : {});
+    }
+    fetchData();
   }, []);
 
-  const getData = async () => {
+  const getData = useCallback(async () => {
     let newFilter = filter;
     if (urlFilterApply) {
       if (filter?.status === "all") {
@@ -182,11 +234,11 @@ export default function CampHome({ footerLinks, userTokenInfo }) {
       setData(qData?.camps);
       setPaginationTotalRows(qData?.totalCount ? qData?.totalCount : 0);
     }
-  };
+  }, [filter, urlFilterApply]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     getData();
-  }, [filter]);
+  }, [getData]);
 
   const handleRowClick = (row) => {
     navigate(`/admin/camps/${row.id}`);
@@ -235,17 +287,21 @@ export default function CampHome({ footerLinks, userTokenInfo }) {
         ),
       });
     } else {
-      setModalVisible(false);
-      showToast({
-        render: () => (
-          <Alert status="warning" alignItems="start" mb="3" mt="4">
-            <HStack alignItems="center" space="2" color>
-              <Alert.Icon size={"lg"} />
-              <AdminTypo.H4>{result?.message}</AdminTypo.H4>
-            </HStack>
-          </Alert>
-        ),
-      });
+      if (result?.data?.length > 0) {
+        setErrors(result?.data);
+      } else {
+        setModalVisible(false);
+        showToast({
+          render: () => (
+            <Alert status="warning" alignItems="start" mb="3" mt="4">
+              <HStack alignItems="center" space="2" color>
+                <Alert.Icon size={"lg"} />
+                <AdminTypo.H4>{result?.message}</AdminTypo.H4>
+              </HStack>
+            </Alert>
+          ),
+        });
+      }
     }
     setIsButtonLoading(false);
   };
@@ -275,7 +331,7 @@ export default function CampHome({ footerLinks, userTokenInfo }) {
             <AdminTypo.H4 bold>{t("ALL_CAMPS")}</AdminTypo.H4>
           </HStack>
         </HStack>
-        {filter?.type === "pcr" && (
+        {filter?.pcr_type === "ready_to_close" && (
           <AdminTypo.Secondarybutton
             onPress={(e) => {
               if (selectedRows?.length > 0) {
@@ -298,24 +354,82 @@ export default function CampHome({ footerLinks, userTokenInfo }) {
           </AdminTypo.Secondarybutton>
         )}
       </HStack>
-      <HStack>
-        <Box
-          flex={[2, 2, 1]}
-          style={{ borderRightColor: "dividerColor", borderRightWidth: "2px" }}
-        >
-          <HStack ref={ref}></HStack>
-          <ScrollView
-            maxH={
-              Height - (refAppBar?.clientHeight + ref?.current?.clientHeight)
-            }
-            temp={Width}
+      <HStack ml="-1">
+        <Stack style={{ position: "relative", overflowX: "hidden" }}>
+          <Stack
+            style={{
+              position: "absolute",
+              top: 0,
+              left: `0`,
+              transition: "left 0.3s ease",
+              width: "250px",
+              height: "100%",
+              background: "white",
+              zIndex: 1,
+            }}
           >
-            {urlFilterApply && <Filter {...{ filter, setFilter }} />}
-          </ScrollView>
-        </Box>
+            <Box
+              flex={[2, 2, 1]}
+              style={{
+                borderRightColor: "dividerColor",
+                borderRightWidth: "2px",
+              }}
+            >
+              <ScrollView
+                maxH={
+                  Height -
+                  (refAppBar?.clientHeight + ref?.current?.clientHeight)
+                }
+                temp={Width}
+              >
+                {urlFilterApply && <Filter {...{ filter, setFilter }} />}
+              </ScrollView>
+            </Box>
+          </Stack>
+
+          <Stack
+            style={{
+              marginLeft: isDrawerOpen ? "250px" : "0",
+              transition: "margin-left 0.3s ease",
+            }}
+          />
+        </Stack>
+        <VStack
+          ml={"-1"}
+          rounded={"xs"}
+          height={"50px"}
+          bg={
+            filter?.district ||
+            filter?.state ||
+            filter?.block ||
+            filter?.status ||
+            filter?.pcr_type
+              ? "textRed.400"
+              : "#E0E0E0"
+          }
+          justifyContent="center"
+          onClick={handleOpenButtonClick}
+        >
+          <IconByName
+            name={isDrawerOpen ? "ArrowLeftSLineIcon" : "FilterLineIcon"}
+            color={
+              filter?.state ||
+              filter?.district ||
+              filter?.block ||
+              filter?.status ||
+              filter?.pcr_type
+                ? "white"
+                : "black"
+            }
+            _icon={{ size: "30px" }}
+          />
+        </VStack>
 
         <Box flex={[5, 5, 4]}>
-          <ScrollView>
+          <ScrollView
+            maxH={Height - refAppBar?.clientHeight - 72}
+            minH={Height - refAppBar?.clientHeight - 72}
+          >
             <HStack pb="2">
               {Array?.isArray(campFilterStatus) &&
                 campFilterStatus?.map((item) => {
@@ -323,21 +437,35 @@ export default function CampHome({ footerLinks, userTokenInfo }) {
                     <AdminTypo.H6
                       key={"table"}
                       color={
+                        (!filter.pcr_type &&
+                          !filter?.status &&
+                          item?.status == "all") ||
                         filter?.status == t(item?.status)
                           ? "textMaroonColor.600"
                           : ""
                       }
-                      bold={filter?.status == t(item?.status)}
+                      bold={
+                        (!filter.pcr_type &&
+                          !filter?.status &&
+                          item?.status == "all") ||
+                        filter?.status == t(item?.status)
+                      }
                       cursor={"pointer"}
                       mx={3}
                       onPress={() => {
-                        setFilter({ ...filter, status: item?.status, page: 1 });
+                        setFilter((prevFilter) => {
+                          const { pcr_type, ...newFilter } = prevFilter;
+                          return {
+                            ...newFilter,
+                            status: item?.status,
+                            page: 1,
+                          };
+                        });
                       }}
+                      alignItems="center"
                     >
                       {item.status === "all" ? (
-                        <AdminTypo.H5 bold color={"textMaroonColor.600"}>
-                          {`${t("ALL")}(${paginationTotalRows})`}
-                        </AdminTypo.H5>
+                        `${t("ALL")}`
                       ) : (
                         <GetEnumValue
                           t={t}
@@ -346,14 +474,39 @@ export default function CampHome({ footerLinks, userTokenInfo }) {
                           enumApiData={enumOptions}
                         />
                       )}
-
-                      {filter?.status != "all" &&
+                      {(!filter.pcr_type &&
+                        !filter?.status &&
+                        item?.status == "all") ||
                       filter?.status == t(item?.status)
-                        ? `(${paginationTotalRows})` + " "
+                        ? ` (${paginationTotalRows})`
                         : " "}
                     </AdminTypo.H6>
                   );
                 })}
+
+              <AdminTypo.H6
+                {...(filter.pcr_type === "ready_to_close" &&
+                (!filter.status || filter.status == "")
+                  ? { bold: true, color: "textMaroonColor.600" }
+                  : {})}
+                onPress={() => {
+                  setFilter((prevFilter) => {
+                    const { status, ...newFilter } = prevFilter;
+                    return {
+                      ...newFilter,
+                      pcr_type: "ready_to_close",
+                      page: 1,
+                    };
+                  });
+                }}
+              >
+                {`${t("CAMPS_READY_TO_CLOSE")}${
+                  filter.pcr_type === "ready_to_close" &&
+                  (!filter.status || filter.status == "")
+                    ? ` (${paginationTotalRows})`
+                    : ""
+                }`}
+              </AdminTypo.H6>
             </HStack>
             <Box roundedBottom={"2xl"}>
               <DataTable
@@ -373,19 +526,19 @@ export default function CampHome({ footerLinks, userTokenInfo }) {
                 defaultSortAsc
                 paginationServer
                 data={data}
-                onChangeRowsPerPage={React.useCallback(
+                onChangeRowsPerPage={useCallback(
                   (e) => {
                     setFilter({ ...filter, limit: e, page: 1 });
                   },
                   [setFilter, filter]
                 )}
-                onChangePage={React.useCallback(
+                onChangePage={useCallback(
                   (e) => {
                     setFilter({ ...filter, page: e });
                   },
                   [setFilter, filter]
                 )}
-                selectableRows={filter?.type === "pcr" && true}
+                selectableRows={filter?.pcr_type === "ready_to_close" && true}
                 onSelectedRowsChange={handleRowCheck}
                 onRowClicked={handleRowClick}
                 dense
@@ -411,6 +564,22 @@ export default function CampHome({ footerLinks, userTokenInfo }) {
                   <AdminTypo.H6 bold>{t("PCR_CLOSE_MESSAGE")}</AdminTypo.H6>
                 </HStack>
               </Alert>
+              {errors && errors?.length > 0 && (
+                <VStack>
+                  <AdminTypo.H2></AdminTypo.H2>
+                  <DataTable
+                    customStyles={{
+                      rows: {
+                        style: {
+                          background: "lightpink",
+                        },
+                      },
+                    }}
+                    columns={[...errorPcrColuman(t)]}
+                    data={errors}
+                  />
+                </VStack>
+              )}
               <DataTable
                 columns={[...closePcrColuman(t)]}
                 defaultSortAsc
@@ -446,10 +615,10 @@ export default function CampHome({ footerLinks, userTokenInfo }) {
 
 export const Filter = ({ filter, setFilter }) => {
   const { t } = useTranslation();
-  const [getDistrictsAll, setGetDistrictsAll] = React.useState();
-  const [getBlocksAll, setGetBlocksAll] = React.useState();
-  const [facilitatorFilter, setFacilitatorFilter] = React.useState({});
-  const [facilitator, setFacilitator] = React.useState([]);
+  const [getDistrictsAll, setGetDistrictsAll] = useState();
+  const [getBlocksAll, setGetBlocksAll] = useState();
+  const [facilitatorFilter, setFacilitatorFilter] = useState({});
+  const [facilitator, setFacilitator] = useState([]);
 
   const setFilterObject = (data) => {
     const { facilitator: newFacilitator, ...otherData } = data;
@@ -476,10 +645,7 @@ export const Filter = ({ filter, setFilter }) => {
     });
   };
 
-  const debouncedHandleSearch = React.useCallback(
-    debounce(handleSearch, 1000),
-    []
-  );
+  const debouncedHandleSearch = useCallback(debounce(handleSearch, 1000), []);
 
   const schema = {
     type: "object",
@@ -536,7 +702,7 @@ export const Filter = ({ filter, setFilter }) => {
     },
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchData = async () => {
       const programResult = await getSelectedProgramId();
       let name = programResult?.state_name;
@@ -551,7 +717,7 @@ export const Filter = ({ filter, setFilter }) => {
     fetchData();
   }, []);
 
-  React.useEffect(async () => {
+  useEffect(async () => {
     let blockData = [];
     if (filter?.district?.length > 0) {
       blockData = await geolocationRegistryService.getMultipleBlocks({
@@ -561,7 +727,7 @@ export const Filter = ({ filter, setFilter }) => {
     setGetBlocksAll(blockData);
   }, [filter?.district]);
 
-  const onChange = React.useCallback(
+  const onChange = useCallback(
     async (data) => {
       const {
         district: newDistrict,
@@ -588,7 +754,7 @@ export const Filter = ({ filter, setFilter }) => {
     setFilterObject({});
     setFacilitatorFilter({});
   };
-  React.useEffect(async () => {
+  useEffect(async () => {
     const { error, ...result } = await facilitatorRegistryService.searchByCamp(
       facilitatorFilter
     );
@@ -645,7 +811,7 @@ export const Filter = ({ filter, setFilter }) => {
       </Box>
       <AdminTypo.H5>{t("PRERAK")}</AdminTypo.H5>
       <Input
-        w="100%"
+        w="95%"
         height="32px"
         placeholder={t("SEARCH")}
         variant="outline"

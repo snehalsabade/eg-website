@@ -23,6 +23,8 @@ import {
   ArrayFieldTitleTemplate,
   BaseInputTemplate,
   CustomR,
+  select,
+  RadioBtn,
 } from "../../../Static/FormBaseInput/FormBaseInput.js";
 import { useTranslation } from "react-i18next";
 import accessControl from "pages/front-end/facilitator/edit/AccessControl.js";
@@ -215,6 +217,9 @@ export default function PersonalDetails({ ip }) {
         setLang,
       }}
       _page={{ _scollView: { bg: "white" } }}
+      analyticsPageTitle={"BENEFICIARY_PERSONAL_DETAILS"}
+      pageTitle={t("BENEFICIARY")}
+      stepTitle={t("PERSONAL_DETAILS")}
     >
       <Box py={6} px={4} mb={5}>
         {/* Box */}
@@ -232,7 +237,7 @@ export default function PersonalDetails({ ip }) {
           <Form
             key={lang}
             ref={formRef}
-            widgets={{ CustomR }}
+            widgets={{ CustomR, RadioBtn }}
             templates={{
               FieldTemplate,
               ArrayFieldTitleTemplate,
