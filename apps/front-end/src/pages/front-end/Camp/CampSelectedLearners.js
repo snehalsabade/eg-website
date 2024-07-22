@@ -106,7 +106,7 @@ export default function CampSelectedLearners() {
 
   useEffect(() => {
     const init = () => {
-      setSelectAllChecked(selectedIds?.length === users.length);
+      setSelectAllChecked(selectedIds?.length === users?.length);
     };
     init();
   }, [selectedIds, users]);
