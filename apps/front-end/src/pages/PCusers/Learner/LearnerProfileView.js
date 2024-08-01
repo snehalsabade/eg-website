@@ -40,7 +40,9 @@ export default function LearnerProfileView({ userTokenInfo }) {
       _appBar={{
         name: t("LEARNER_PROFILE"),
         onPressBackButton: () => {
-          navigate("/learner/LearnerListView");
+          navigate("/learner/LearnerListView", {
+            state: location.state?.filter,
+          });
         },
       }}
       loading={loading}
